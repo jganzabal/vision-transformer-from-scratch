@@ -8,6 +8,9 @@ import torchvision.transforms as transforms
 
 from vit import ViTForClassfication
 
+def get_param_count(model):
+    param_counts = [np.prod(p.size()) for p in model.parameters()]
+    return np.sum(param_counts)
 
 def save_experiment(experiment_name, config, model, train_losses, test_losses, accuracies, base_dir="experiments"):
     outdir = os.path.join(base_dir, experiment_name)

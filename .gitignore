@@ -1,0 +1,4 @@
+experiments/
+data/
+*.png
+__pycache__

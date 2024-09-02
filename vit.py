@@ -1,7 +1,8 @@
 import math
 import torch
 from torch import nn
-
+from einops.layers.torch import Rearrange
+from torch import Tensor
 
 class NewGELUActivation(nn.Module):
     """
@@ -14,29 +15,45 @@ class NewGELUActivation(nn.Module):
     def forward(self, input):
         return 0.5 * input * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (input + 0.044715 * torch.pow(input, 3.0))))
 
-
 class PatchEmbeddings(nn.Module):
-    """
-    Convert the image into patches and then project them into a vector space.
-    """
-
     def __init__(self, config):
+        in_channels = config["num_channels"]
+        patch_size = config["patch_size"]
+        emb_size = config["hidden_size"]
+        self.patch_size = patch_size
         super().__init__()
-        self.image_size = config["image_size"]
-        self.patch_size = config["patch_size"]
-        self.num_channels = config["num_channels"]
-        self.hidden_size = config["hidden_size"]
-        # Calculate the number of patches from the image size and patch size
-        self.num_patches = (self.image_size // self.patch_size) ** 2
-        # Create a projection layer to convert the image into patches
-        # The layer projects each patch into a vector of size hidden_size
-        self.projection = nn.Conv2d(self.num_channels, self.hidden_size, kernel_size=self.patch_size, stride=self.patch_size)
+        self.projection = nn.Sequential(
+            # break-down the image in s1 x s2 patches and flat them
+            Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=patch_size, p2=patch_size),
+            nn.Linear(patch_size * patch_size * in_channels, emb_size)
+        )
 
-    def forward(self, x):
-        # (batch_size, num_channels, image_size, image_size) -> (batch_size, num_patches, hidden_size)
+    def forward(self, x: Tensor) -> Tensor:
         x = self.projection(x)
-        x = x.flatten(2).transpose(1, 2)
         return x
+
+# class PatchEmbeddings(nn.Module):
+#     """
+#     Convert the image into patches and then project them into a vector space.
+#     """
+
+#     def __init__(self, config):
+#         super().__init__()
+#         self.image_size = config["image_size"]
+#         self.patch_size = config["patch_size"]
+#         self.num_channels = config["num_channels"]
+#         self.hidden_size = config["hidden_size"]
+#         # Calculate the number of patches from the image size and patch size
+#         self.num_patches = (self.image_size // self.patch_size) ** 2
+#         # Create a projection layer to convert the image into patches
+#         # The layer projects each patch into a vector of size hidden_size
+#         self.projection = nn.Conv2d(self.num_channels, self.hidden_size, kernel_size=self.patch_size, stride=self.patch_size)
+
+#     def forward(self, x):
+#         # (batch_size, num_channels, image_size, image_size) -> (batch_size, num_patches, hidden_size)
+#         x = self.projection(x)
+#         x = x.flatten(2).transpose(1, 2)
+#         return x
 
 
 class Embeddings(nn.Module):
