@@ -17,15 +17,16 @@ class NewGELUActivation(nn.Module):
 
 class PatchEmbeddings(nn.Module):
     def __init__(self, config):
-        in_channels = config["num_channels"]
-        patch_size = config["patch_size"]
-        emb_size = config["hidden_size"]
-        self.patch_size = patch_size
+        self.image_size = config["image_size"]
+        self.in_channels = config["num_channels"]
+        self.patch_size = config["patch_size"]
+        self.emb_size = config["hidden_size"]
+        self.num_patches = (self.image_size // self.patch_size) ** 2
         super().__init__()
         self.projection = nn.Sequential(
             # break-down the image in s1 x s2 patches and flat them
-            Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=patch_size, p2=patch_size),
-            nn.Linear(patch_size * patch_size * in_channels, emb_size)
+            Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=self.patch_size, p2=self.patch_size),
+            nn.Linear(self.patch_size * self.patch_size * self.in_channels, self.emb_size)
         )
 
     def forward(self, x: Tensor) -> Tensor:
